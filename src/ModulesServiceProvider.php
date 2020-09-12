@@ -28,7 +28,7 @@ class ModulesServiceProvider extends ServiceProvider
     public function boot()
     {
         Blade::directive('module', function($position) {
-            return "<?php echo Module::render('{$position}'); ?>";
+            return "<?php echo Modules::render('{$position}'); ?>";
         });
     }
 }
