@@ -1,5 +1,5 @@
 {
-    "name": "isemenkov/modules",
+    "name": "isemenkov/laravel-modules",
     "description" : "laravel modules library",
     "keywords": ["laravel"],
     "type": "library",
