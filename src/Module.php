@@ -2,32 +2,41 @@
 
 namespace isemenkov\Modules;
 
-abstract class Module {
+interface Module {
+    
     /**
-     * Return module position.
-     * @param nothing
+     * Return current module template position label string.
+     * If function isn't exists as position label uses lowercase module class 
+     * name.
+     * 
+     * @param null
      * @return String Position label.
+     * public function position();
      */
-    abstract public function position();
-
+    
     /**
-     * Return module sort priority value.
-     * @param nothing
+     * Return current module sort priority value.
+     * If function isn't exists priority sets as zero.
+     * 
+     * @param null
      * @return Integer Sort module priority weight.
+     * public function priority(); 
      */
-    abstract public function priority();
 
     /**
-     * Return module needs permission.
-     * @param nothing
-     * @return String Module permissions.
+     * Return current module needs permissions. 
+     * You can set callback function as parameter which ModulesManager may call 
+     * to accepted permissions.
+     *  
+     * @param null
+     * @return String|Callable Module permissions string | Callback function
+     * public function permission();
      */
-    abstract public function permission();
-
+    
     /**
      * Render current module to html.
      * @param mixing Template render args.
      * @return String Html view.
      */
-    abstract public function render($args = null); 
+    public function render($args = null);
 }

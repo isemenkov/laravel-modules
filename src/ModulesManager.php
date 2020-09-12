@@ -18,13 +18,36 @@ class ModulesManager {
 
     /**
      * Register new template module.
+     * Set isemenkov\Modules\Module object or array of modules.
      * 
-     * @param App\Contracts\Module $module Registered module.
-     * @return nothing
+     * @param isemenkov\Modules\Module|array| $module 
+     * Registered module object | Array with modules objects 
+     * @return null
      */
-    public function registerModule(Module $module, $args = null) {
-        $this->modules[$module->position()][] = [
-            'priority'  => $module->priority(),
+    public function registerModule($module, $args = null) {
+        if(is_array($module)) {
+            foreach($module as $module_object) {
+                if(is_array($module_object)) {
+                    $this->registerModule($module_object[0], $module_object[1]);    
+                } else {
+                    $this->registerModule($module_object);
+                }
+            }
+            return;
+        }
+
+        $position = method_exists($module, 'position') ?
+            $module->position() :
+            str_replace('module', '',
+                strtolower((new \ReflectionClass($module))->getShortName())
+            );
+
+        $priority = method_exists($module, 'priority') ?
+            $module->priority() :
+            0;
+
+        $this->modules[$position][] = [
+            'priority'  => $priority,
             'module'    => $module,
             'args'      => $args,
         ];
@@ -32,30 +55,6 @@ class ModulesManager {
         $this->sorted = false;
     }
 
-    /**
-     * Register new template modules.
-     * 
-     * @param array|string $modules Array|String group name with registered modules.
-     * @return nothing
-     */
-    public function registerModules($modules) {
-        if(is_string($modules)) {
-            $group = Config::get('modules.groups.'.$modules, []);
-
-            $modules = [];
-            foreach($group as $module) {
-                $modules[] = new $module;
-            }
-        }
-
-        foreach($modules as $module) {
-            if (is_array($module)) {
-                $this->registerModule(array_shift($module), $module);
-            } else {
-                $this->registerModule($module);
-            }
-        }
-    }
 
     /**
      * Return all registered modules positions.
@@ -111,11 +110,11 @@ class ModulesManager {
             $this->sorted = true;
         }
         
-        if (isset($this->modules[$position])) {
+        if (isset($this->modules[$position]) ) {
             $html = '';
             foreach($this->modules[$position] as $module) {
                 $html .= call_user_func_array([$module["module"], 'render'],
-                    !is_null($module['args']) ? $module['args'] : []);
+                    !is_null($module['args']) ? [$module['args']] : []);
             }
             return $html;
         }  
