@@ -11,7 +11,10 @@ interface Module {
      * 
      * @param null
      * @return String Position label.
-     * public function position();
+     * 
+     * public function position() {
+     *     return "module.position";
+     * }
      */
     
     /**
@@ -20,7 +23,10 @@ interface Module {
      * 
      * @param null
      * @return Integer Sort module priority weight.
-     * public function priority(); 
+     * 
+     * public function priority() {
+     *     return -1;
+     * } 
      */
 
     /**
@@ -30,13 +36,30 @@ interface Module {
      *  
      * @param null
      * @return String|Callable Module permissions string | Callback function
-     * public function permission();
+     * 
+     * public function permission() {
+     *     return "module.permission";
+     * }
      */
     
+    /**
+     * Return current module cache key. If return true as cache key takes module
+     * name.
+     * 
+     * @return String|Bool|Callable Module cached key or bool.
+     * 
+     * public function cache() {
+     *     return "module.cache_key";
+     * }
+     */
+
     /**
      * Render current module to html.
      * @param mixing Template render args.
      * @return String Html view.
+     * 
+     * public function render($args = null) {
+     *     return View::make("module.view");
+     * }
      */
-    public function render($args = null);
 }
