@@ -138,7 +138,7 @@ class ModulesManager {
                     if(is_bool($cache) && $cache) {
                         $module_cache_key = 
                             (new \ReflectionClass($module['module']))
-                            ->getShortName();
+                                ->getShortName();
                     } else if(is_string($cache)) {
                         $module_cache_key = $cache;    
                     };

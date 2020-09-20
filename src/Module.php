@@ -19,6 +19,7 @@ interface Module {
     
     /**
      * Return current module sort priority value.
+     * This value is used to sort multiples modules registered in one position.
      * If function isn't exists priority sets as zero.
      * 
      * @param null
@@ -30,9 +31,12 @@ interface Module {
      */
 
     /**
-     * Return current module needs permissions. 
-     * You can set callback function as parameter which ModulesManager may call 
-     * to accepted permissions.
+     * Return current module needs permissions.
+     * If return bool value then on true module is rendered, on false none.
+     * If return value type is string it is a permission access to render. 
+     * If return callback function then ModulesManager call it to resolve 
+     *   permissions.
+     * If function isn't exists module render always.
      *  
      * @param null
      * @return String|Callable Module permissions string | Callback function
@@ -43,10 +47,14 @@ interface Module {
      */
     
     /**
-     * Return current module cache key. If return true as cache key takes module
-     * name.
+     * Current module caching strategy. 
+     * If return bool value then on true module cached always. As a cache key 
+     *   uses lowercase module name. On false module newer cached.
+     * If return value type is string it is uses as cache key.
+     * If return callback function then ModulesManager call it to rsolve
+     *   caching strategy.
      * 
-     * @return String|Bool|Callable Module cached key or bool.
+     * @return Bool|String|Callable Module cached stategy.
      * 
      * public function cache() {
      *     return "module.cache_key";
@@ -54,9 +62,11 @@ interface Module {
      */
 
     /**
-     * Render current module to html.
-     * @param mixing Template render args.
-     * @return String Html view.
+     * Render current module.
+     * If function exists it is uses to render current module.
+     * 
+     * @param mixing Template render arguments.
+     * @return String|Serializable Rendered view.
      * 
      * public function render($args = null) {
      *     return View::make("module.view");
