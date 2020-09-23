@@ -5,51 +5,100 @@ namespace isemenkov\Modules;
 use isemenkov\Modules\Module;
 use Illuminate\Support\Facades\Cache;
 
-class ModulesManager {
+final class ModulesManager {
 
     /**
-     * Registered modules list.
+     * Registered modules.
+     * 
+     * @var array
      */
-    protected $modules = [];
+    private $modules = [];
+
+    /**
+     * Default module weight.
+     * 
+     * @var integer
+     */
+    private $defaultWeight = 0;
 
     /**
      * Store true if modules was sort.
+     * 
+     * @var boolean
      */
-    protected $sorted = false;
+    private $sorted = false;
 
     /**
-     * Register new template module.
+     * Sort registered modules by its priority.
      * 
-     * @param isemenkov\Modules\Module|array| $module 
-     * Register module object | Array with modules objects 
      * @return null
      */
-    public function registerModule($module, $args = null) {
-        if(is_array($module)) {
-            foreach($module as $module_object) {
-                if(is_array($module_object)) {
-                    $this->registerModule($module_object[0], 
-                        count($module_object) > 1 ? $module_object[1] : null);    
-                } else {
-                    $this->registerModule($module_object);
-                }
-            }
-            return;
+    private function sortModules() {
+
+        // Get all module positions.
+        $modulePositions = array_keys($this->modules);
+
+        // Modules sorting by its weight in concerete position.
+        foreach($modulePositions as $position) {
+            uasort($this->modules[$position], [$this, 'compareModules']);
         }
 
+        // Set all modules sorted.
+        $this->sorted = true;
+    }
+
+    /**
+     * Get module template position name.
+     * 
+     * @param isemenkov\Modules\Module $module
+     * @return string Module position name
+     */
+    private function getModulePosition($module) {
+
+        // Check if module has position method.
+        if(method_exists($module, 'position')) {
+            return $module->position();
+        }
+
+        // Return lower case module short class name without 'module' substring 
+        //   inside.
+        $class = (new \ReflectionClass($module))->getShortName();
+        return str_replace('module', '', strtolower($class));
+    }
+
+    /**
+     * Get module priority weight.
+     * 
+     * @param isemenkov\Modules\Module $module
+     * @return integer Module priority weight.
+     */
+    private function getModulePriority($module) {
+
+        // Check if module has priority method.
+        if(method_exists($module, 'priority')) {
+            return $module->priority();
+        }
+
+        // Return default module weight.
+        return $this->defaultWeight;
+    }
+
+    /**
+     * Store concrete module.
+     * 
+     * @param isemenkov\Modules\Module $module
+     * @param mixed $args Module render function arguments.
+     * @return null
+     */
+    private function storeModule($module, $args) {
+
         // Get module render position value.
-        $position = method_exists($module, 'position') ?
-            $module->position() :
-            str_replace('module', '',
-                strtolower((new \ReflectionClass($module))->getShortName())
-            );
+        $position = $this->getModulePosition($module);
 
         // Get module position in render queue.
-        $priority = method_exists($module, 'priority') ?
-            $module->priority() :
-            0;
+        $priority = $this->getModulePriority($module);
 
-        // Store module in list.
+        // Store module in array.
         $this->modules[$position][] = [
             'priority'  => $priority,
             'module'    => $module,
@@ -58,6 +107,66 @@ class ModulesManager {
 
         // Registered new module(s), not sorted yet.
         $this->sorted = false;
+    }
+
+    /**
+     * Get module cache key.
+     * 
+     * @param isemenkov\Modules\Module $module
+     * @return string
+     */
+    private function getModuleCacheKey($module) {
+        $result = null;
+        
+        // Check if module has cache method.
+        if(method_exists($module, 'cache')) {
+            $result = $module->cache();
+        }
+
+        if(is_callable($result)) {
+            $result = call_user_func($result);
+        }
+
+        if(is_string($result) && !empty($result)) {
+            return $result;
+        }
+
+        if(is_bool($result) && !$result) {
+            return '';
+        }
+
+        return (new \ReflectionClass($module))->getShortName();
+    }
+
+    /**
+     * Register new template module.
+     * 
+     * @param isemenkov\Modules\Module|array $module Register module object | 
+     *   Array with modules objects 
+     * @return null
+     */
+    public function registerModule($module, $args = null) {
+        
+        // Check if input is array of modules.
+        if(is_array($module)) {
+
+            // For each module.
+            foreach($module as $module_item) {
+
+                // Check if it is array of modules.
+                if(is_array($module_item)) {
+                    call_user_func_array([$this, 'registerModule'], 
+                        $module_item);
+                }
+
+                // Store current module.
+                $this->storeModule($module_item, null);
+            }
+            return;
+        }
+
+        // Store current module.
+        $this->storeModule($module, $args);
     }
 
     /**
@@ -91,20 +200,6 @@ class ModulesManager {
     }
 
     /**
-     * Sort registered modules by priority.
-     * 
-     * @param nothing
-     * @return nothing
-     */
-    protected function sortModules() {
-        $modulePositions = array_keys($this->modules);
-        foreach($modulePositions as $position) {
-            uasort($this->modules[$position], [$this, 'compareModules']);
-        }
-        $this->sorted = true;
-    }
-
-    /**
      * Return $position rendered modules.
      * 
      * @param String $position Modules position to render.
@@ -124,24 +219,9 @@ class ModulesManager {
             // Foreach module in current render position.
             foreach($this->modules[$position] as $module) {
 
-                // Try to find module method cache.
-                $module_cache_key = null;
-                if(method_exists($module['module'], 'cache')) {
-                    $cache = call_user_func([$module['module'], 'cache']);
-                    
-                    // If result is function.
-                    if(is_callable($cache)) {
-                        $cache = $cache();
-                    }
-
-                    // Get module cache key.
-                    if(is_bool($cache) && $cache) {
-                        $module_cache_key = 
-                            (new \ReflectionClass($module['module']))
-                                ->getShortName();
-                    } else if(is_string($cache)) {
-                        $module_cache_key = $cache;    
-                    };
+                // Try to get module cache.
+                $module_cache_key = $this->getModuleCacheKey($module['module']);
+                if(!empty($module_cache_key)) {
 
                     // If module view cached return it.
                     if(!is_null($module_cache_key) && 

@@ -126,7 +126,7 @@ use App\Modules\TestModule;
 
 class TestController extends Controller {
 
-    public function index(ModuleManager $manager) {
+    public function index(ModulesManager $manager) {
         $manager->registerModule([
             new TestModule(),
         ]);
