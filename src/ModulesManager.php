@@ -4,7 +4,6 @@ namespace isemenkov\Modules;
 
 use isemenkov\Modules\Module;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Config;
 
 final class ModulesManager {
 
@@ -20,14 +19,14 @@ final class ModulesManager {
      * 
      * @var integer
      */
-    private $moduleDefaultWeight = 0;
+    private $moduleDefaultWeight;
 
     /**
      * Default module cache time.
      * 
      * @var integer
      */
-    private $moduleDefaultCacheTime = 3600;
+    private $moduleDefaultCacheTime;
 
     /**
      * Store true if modules was sort.
@@ -37,13 +36,46 @@ final class ModulesManager {
     private $sorted = false;
 
     /**
-     * 
+     * Constructor.
      */
     public function __construct()
     {
+        $this->getConfigData();
+    }
+
+    /**
+     * Load configuration.
+     * 
+     * @param void
+     * @return void
+     */
+    private function getConfigData() {
         $this->moduleDefaultWeight = config('modules.default_priority', 0);
         $this->moduleDefaultCacheTime = config('modules.default_cache_time', 
             3600);
+    }
+
+    /**
+     * Resolve callbacks args.
+     * 
+     * 
+     */
+    private function getModuleValue($module, $method) {
+        
+        // Check if module has position method.
+        if(method_exists($module, $method)) {
+            $result = $module->$method();
+
+            // Check if it is function and resolve it.
+            if(is_callable($result)) {
+                $result = call_user_func($result);
+            }
+
+            return $result;
+        }
+
+        // Value isn't.
+        return null;
     }
 
     /**
@@ -74,14 +106,9 @@ final class ModulesManager {
     private function getModulePosition($module) {
 
         // Check if module has position method.
-        if(method_exists($module, 'position')) {
-            $result = $module->position();
+        $result = $this->getModuleValue($module, 'position'); 
 
-            // Check if it is function and resolve it.
-            if(is_callable($result)) {
-                $result = call_user_func($result);
-            }
-
+        if(! is_null($result)) {
             return $result;
         }
 
@@ -100,14 +127,9 @@ final class ModulesManager {
     private function getModulePriority($module) {
 
         // Check if module has priority method.
-        if(method_exists($module, 'priority')) {
-            $result = $module->priority();
+        $result = $this->getModuleValue($module, 'priority');
 
-            // Check if it is function and resolve it.
-            if(is_callable($result)) {
-                $result = call_user_func($result);
-            }
-
+        if(! is_null($result)) {
             return $result;
         }
 
@@ -124,20 +146,13 @@ final class ModulesManager {
     public function getModuleCacheTime($module) {
 
         // Check if module has cacheTime method.
-        if(method_exists($module, 'cacheTime')) {
-            $result = $module->cacheTime();
+        $result = $this->getModuleValue($module, 'cacheTime');
 
-            // Check if it is function and resolve it.
-            if(is_callable($result)) {
-                $result = call_user_func($result);
-            }
-
-            if(is_bool($result) && $result) {
-                // Cache forever.
-                return null;
-            } else if(is_integer($result)) {
-                return $result;
-            }
+        if(is_bool($result) && $result) {
+            // Cache forever.
+            return null;
+        } else if(is_integer($result)) {
+            return $result;
         }
 
         // Return default value.
@@ -180,13 +195,7 @@ final class ModulesManager {
         $result = null;
         
         // Check if module has cache method.
-        if(method_exists($module, 'cache')) {
-            $result = $module->cache();
-        }
-
-        if(is_callable($result)) {
-            $result = call_user_func($result);
-        }
+        $result = $this->getModuleValue($module, 'cache');
 
         if(is_string($result) && !empty($result)) {
             return $result;

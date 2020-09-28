@@ -32,13 +32,13 @@ class ModulesServiceProvider extends ServiceProvider
         // Publish config.
         $this->publishes([
             __DIR__ . '/config/modules.php' => config_path('modules.php'),
-        ]);
+        ], 'config');
         
         // Register new blade directive.
         Blade::directive('module', function($position) {
             // Remove all posible quotes.
             $position = str_replace("'\"", "", $position);
-            
+
             return "<?php echo Modules::render('{$position}'); ?>";
         });
     }
