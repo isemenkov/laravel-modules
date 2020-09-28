@@ -4,6 +4,7 @@ namespace isemenkov\Modules;
 
 use isemenkov\Modules\Module;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 
 final class ModulesManager {
 
@@ -19,7 +20,14 @@ final class ModulesManager {
      * 
      * @var integer
      */
-    private $defaultWeight = 0;
+    private $moduleDefaultWeight = 0;
+
+    /**
+     * Default module cache time.
+     * 
+     * @var integer
+     */
+    private $moduleDefaultCacheTime = 3600;
 
     /**
      * Store true if modules was sort.
@@ -27,6 +35,16 @@ final class ModulesManager {
      * @var boolean
      */
     private $sorted = false;
+
+    /**
+     * 
+     */
+    public function __construct()
+    {
+        $this->moduleDefaultWeight = config('modules.default_priority', 0);
+        $this->moduleDefaultCacheTime = config('modules.default_cache_time', 
+            3600);
+    }
 
     /**
      * Sort registered modules by its priority.
@@ -57,7 +75,14 @@ final class ModulesManager {
 
         // Check if module has position method.
         if(method_exists($module, 'position')) {
-            return $module->position();
+            $result = $module->position();
+
+            // Check if it is function and resolve it.
+            if(is_callable($result)) {
+                $result = call_user_func($result);
+            }
+
+            return $result;
         }
 
         // Return lower case module short class name without 'module' substring 
@@ -76,11 +101,47 @@ final class ModulesManager {
 
         // Check if module has priority method.
         if(method_exists($module, 'priority')) {
-            return $module->priority();
+            $result = $module->priority();
+
+            // Check if it is function and resolve it.
+            if(is_callable($result)) {
+                $result = call_user_func($result);
+            }
+
+            return $result;
         }
 
         // Return default module weight.
-        return $this->defaultWeight;
+        return $this->moduleDefaultWeight;
+    }
+
+    /**
+     * Get module cache time.
+     * 
+     * @param isemenkov\Modules\Module $module
+     * @return integer|null
+     */
+    public function getModuleCacheTime($module) {
+
+        // Check if module has cacheTime method.
+        if(method_exists($module, 'cacheTime')) {
+            $result = $module->cacheTime();
+
+            // Check if it is function and resolve it.
+            if(is_callable($result)) {
+                $result = call_user_func($result);
+            }
+
+            if(is_bool($result) && $result) {
+                // Cache forever.
+                return null;
+            } else if(is_integer($result)) {
+                return $result;
+            }
+        }
+
+        // Return default value.
+        return $this->moduleDefaultCacheTime;
     }
 
     /**
@@ -248,7 +309,14 @@ final class ModulesManager {
                 if(is_string($module_cache_key) || 
                     (is_bool($module_cache_key) && $module_cache_key)) {
 
-                    Cache::put($module_cache_key, $module_view);
+                    // Get module cache time.    
+                    $cacheTime = $this->getModuleCacheTime($module['module']);
+
+                    if(! is_null($cacheTime)) {
+                        Cache::put($module_cache_key, $module_view, $cacheTime);
+                    } else {
+                        Cache::forever($module_cache_key, $module_view);
+                    }
                 }
                 
                 $html .= $module_view;
