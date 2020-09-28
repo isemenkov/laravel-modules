@@ -1,7 +1,7 @@
 {
     "name": "isemenkov/laravel-modules",
     "description" : "laravel modules library",
-    "keywords": ["laravel"],
+    "keywords": ["laravel", "template"],
     "type": "library",
     "license": "MIT",
     "authors": [
