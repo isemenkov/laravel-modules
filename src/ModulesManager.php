@@ -58,9 +58,11 @@ final class ModulesManager {
     /**
      * Resolve callbacks args.
      * 
-     * 
+     * @param stdClass $module
+     * @param string $method Get module method
+     * @return mixed
      */
-    private function getModuleValue($module, $method) {
+    private function getValue($module, $method) {
         
         // Check if module has position method.
         if(method_exists($module, $method)) {
@@ -81,7 +83,7 @@ final class ModulesManager {
     /**
      * Sort registered modules by its priority.
      * 
-     * @return null
+     * @return void
      */
     private function sortModules() {
 
@@ -100,13 +102,13 @@ final class ModulesManager {
     /**
      * Get module template position name.
      * 
-     * @param isemenkov\Modules\Module $module
+     * @param stdClass $module
      * @return string Module position name
      */
     private function getModulePosition($module) {
 
         // Check if module has position method.
-        $result = $this->getModuleValue($module, 'position'); 
+        $result = $this->getValue($module, 'position'); 
 
         if(! is_null($result)) {
             return $result;
@@ -121,13 +123,13 @@ final class ModulesManager {
     /**
      * Get module priority weight.
      * 
-     * @param isemenkov\Modules\Module $module
+     * @param stdClass $module
      * @return integer Module priority weight.
      */
     private function getModulePriority($module) {
 
         // Check if module has priority method.
-        $result = $this->getModuleValue($module, 'priority');
+        $result = $this->getValue($module, 'priority');
 
         if(! is_null($result)) {
             return $result;
@@ -140,13 +142,13 @@ final class ModulesManager {
     /**
      * Get module cache time.
      * 
-     * @param isemenkov\Modules\Module $module
-     * @return integer|null
+     * @param stdClass $module
+     * @return integer|void
      */
     public function getModuleCacheTime($module) {
 
         // Check if module has cacheTime method.
-        $result = $this->getModuleValue($module, 'cacheTime');
+        $result = $this->getValue($module, 'cacheTime');
 
         if(is_bool($result) && $result) {
             // Cache forever.
@@ -162,9 +164,9 @@ final class ModulesManager {
     /**
      * Store concrete module.
      * 
-     * @param isemenkov\Modules\Module $module
+     * @param stdClass $module
      * @param mixed $args Module render function arguments.
-     * @return null
+     * @return void
      */
     private function storeModule($module, $args) {
 
@@ -188,45 +190,61 @@ final class ModulesManager {
     /**
      * Get module cache key.
      * 
-     * @param isemenkov\Modules\Module $module
+     * @param stdClass $module
      * @return string
      */
     private function getModuleCacheKey($module) {
         $result = null;
         
         // Check if module has cache method.
-        $result = $this->getModuleValue($module, 'cache');
-
+        $result = $this->getValue($module, 'cache');
+        
         if(is_string($result) && !empty($result)) {
             return $result;
         }
 
-        if(is_bool($result) && !$result) {
-            return '';
+        if(is_bool($result) && $result) {
+            return (new \ReflectionClass($module))->getShortName();
         }
-
-        return (new \ReflectionClass($module))->getShortName();
+        
+        return '';
     }
 
     /**
      * Register new template module.
      * 
-     * @param isemenkov\Modules\Module|array $module Register module object | 
-     *   Array with modules objects 
-     * @return null
+     * @param isemenkov\Modules\Module|string|array $module Register module 
+     *  object | Register module full name | Array with modules objects or 
+     *  strings
+     * @param mixed $construct_args If $module is string this param used for
+     *  module constructor.
+     * @param mixed $render_args Module render arguments.
+     * @return void
      */
-    public function registerModule($module, $args = null) {
+    public function registerModule($module, $construct_args = null, 
+        $render_args = null) {
+        
+        // Check if $module is a concrete module class name
+        if(is_string($module)) {
+            $module = new $module($construct_args);
+        }
         
         // Check if input is array of modules.
         if(is_array($module)) {
 
             // For each module.
             foreach($module as $module_item) {
-
+                
+                // Check if item is a module class name
+                if (is_string($module_item)) {
+                    $module_item = new $module_item($construct_args);
+                }
+                
                 // Check if it is array of modules.
                 if(is_array($module_item)) {
                     call_user_func_array([$this, 'registerModule'], 
                         $module_item);
+                    continue;
                 }
 
                 // Store current module.
@@ -236,13 +254,13 @@ final class ModulesManager {
         }
 
         // Store current module.
-        $this->storeModule($module, $args);
+        $this->storeModule($module, $render_args);
     }
 
     /**
      * Return all registered modules positions.
      * 
-     * @param nothing
+     * @param void
      * @return array Modules positions.
      */
     public function modulesPositions() {
@@ -255,7 +273,7 @@ final class ModulesManager {
      * 
      * @param array $module1 First compared module.
      * @param array $module2 Second compared module.
-     * @return Integer Compare result.
+     * @return integer Compare result.
      */
     protected function compareModules(array $module1, array $module2) {
         if ($module1['priority'] === $module2['priority']) {
@@ -272,8 +290,8 @@ final class ModulesManager {
     /**
      * Return $position rendered modules.
      * 
-     * @param String $position Modules position to render.
-     * @return String All renderer modules as $position as html.
+     * @param string $position Modules position to render.
+     * @return string All renderer modules as $position as html.
      */
     public function render($position) {
         

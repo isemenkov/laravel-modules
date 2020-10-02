@@ -9,6 +9,7 @@ A simple package for working with template modules.
 * [What is?](#what-is)
   * [Solution](#solution)
   * [Module structure](#module-structure)
+  * [Register module](#register-module)
 * [Requirements](#requirements)
 * [Installation](#installation)
 * [Usage](#usage)
@@ -30,31 +31,35 @@ namespace App\Modules\TestModule;
 
 class TestModule {
     
-    /**
+   /**
      * Return current module template position label string.
      * If function isn't exists as position label uses lowercase module class 
-     * name.
+     *   name.
+     * If return callback function then ModulesManager call it to resolve 
+     *   module position.
      * 
-     * @param null
-     * @return String Position label.
-     */ 
+     * @param void
+     * @return string|callable Position label | Callback function.
+     */
     public function position() {
         return "module.position";
     }
 
-    /**
+   /**
      * Return current module sort priority value.
      * This value is used to sort multiples modules registered in one position.
      * If function isn't exists priority sets as zero.
+     * If return callback function then ModulesManager call it to resolve 
+     *   module priority weight.
      * 
-     * @param null
-     * @return Integer Sort module priority weight.
+     * @param void
+     * @return integer|callable Sort module priority weight | Callback function.
      */ 
     public function priority() {
         return -1;
-    } 
+    }
     
-    /**
+   /**
      * Return current module needs permissions.
      * If return bool value then on true module is rendered, on false none.
      * If return value type is string it is a permission access to render. 
@@ -62,37 +67,104 @@ class TestModule {
      *   permissions.
      * If function isn't exists module render always.
      *  
-     * @param null
-     * @return Bool|String|Callable Module permissions
+     * @param void
+     * @return string|callable Module permissions string | Callback function
      */ 
     public function permission() {
         return "module.permission";
     }
     
-    /**
+   /**
      * Current module caching strategy. 
      * If return bool value then on true module cached always. As a cache key 
      *   uses lowercase module name. On false module newer cached.
      * If return value type is string it is uses as cache key.
-     * If return callback function then ModulesManager call it to rsolve
+     * If return callback function then ModulesManager call it to resolve
      *   caching strategy.
      * 
-     * @return Bool|String|Callable Module cached stategy.
+     * @return bool|string|callable Module cached stategy.
      */ 
     public function cache() {
         return "module.cache_key";
     }
     
-    /**
+   /**
+     * Current module cache time.
+     * If return bool value then on true module cached forever. On false module 
+     *   newer cached.
+     * Return value for cache timeout in seconds.
+     * If return callback function then ModulesManager call it to resolve
+     *   cache time.
+     * 
+     * @param void
+     * @return bool|integer|callable 
+     */
+    public function cacheTime() {
+        return 3600; 
+    }
+
+   /**
      * Render current module.
      * If function exists it is uses to render current module.
      * 
      * @param mixing Template render arguments.
-     * @return String|Serializable Rendered view.
+     * @return string|serializable Rendered view.
      */ 
     public function render($args = null) {
         return View::make("module.view");
     }
+}
+```
+
+#### Register module
+
+Each module must be registered before use. You can use several ways for this.
+
+- Set module class object.
+
+```php
+public function index(ModulesManager $manager) {
+    $manager->registerModule([
+        new TestModule($construct_args),
+        /* Register as many modules as you need */
+    ]);
+
+    return View::make('frontend');
+}
+```
+
+- Set full module string class name
+
+```php
+public function index(ModulesManager $manager) {
+    $manager->registerModule([
+        TestModule::class,
+    ]);
+
+    return View::make('frontend');
+}
+```
+
+To pass arguments to a constructor, pass an array, the first element of which will be the class name, and the second will be arguments to the constructor.
+
+```php
+public function index(ModulesManager $manager) {
+    $manager->registerModule([
+        [TestModule::class, $construct_args],
+    ]);
+
+    return View::make('frontend');
+}
+```
+Add the third element of the array to pass arguments to the render method.
+
+```php
+public function index(ModulesManager $manager) {
+    $manager->registerModule([
+        [TestModule::class, $consruct_args, $render_args],
+    ]);
+
+    return View::make('frontend');
 }
 ```
 
@@ -128,7 +200,7 @@ class TestController extends Controller {
 
     public function index(ModulesManager $manager) {
         $manager->registerModule([
-            new TestModule(),
+            TestModule::class,
         ]);
 
         return View::make('frontend');

@@ -36,9 +36,6 @@ class ModulesServiceProvider extends ServiceProvider
         
         // Register new blade directive.
         Blade::directive('module', function($position) {
-            // Remove all posible quotes.
-            $position = str_replace("'\"", "", $position);
-
             return "<?php echo Modules::render('{$position}'); ?>";
         });
     }
