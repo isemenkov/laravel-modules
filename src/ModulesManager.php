@@ -56,6 +56,29 @@ final class ModulesManager {
     }
 
     /**
+     * Create new class object.
+     * 
+     * @param string $className Class name.
+     * @param mixed $args Constructor arguments.
+     * @return object Created object.
+     */
+    private function createNewObject(string $className, $args = null) {
+        
+        // Convert $construct_args to array.
+        if((! is_null($args)) && (! is_array($args))) {
+            $args = array($args);
+        }
+        
+        // Create new object.
+        if(method_exists($className, '__construct')) {
+            $class = new \ReflectionClass($className);
+            return $class->newInstanceArgs($args);
+        } 
+        
+        return new $className();
+    }
+
+    /**
      * Resolve callbacks args.
      * 
      * @param stdClass $module
@@ -244,7 +267,7 @@ final class ModulesManager {
         
         // Check if $module is a concrete module class name
         if(is_string($module)) {
-            $module = new $module($construct_args);
+            $module = $this->createNewObject($module, $construct_args);
         }
         
         // Check if input is array of modules.
@@ -255,7 +278,9 @@ final class ModulesManager {
                 
                 // Check if item is a module class name
                 if (is_string($module_item)) {
-                    $module_item = new $module_item($construct_args);
+
+                    $module_item = 
+                        $this->createNewObject($module_item, $construct_args);
                 }
                 
                 // Check if it is array of modules.

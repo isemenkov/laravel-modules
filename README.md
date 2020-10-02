@@ -156,6 +156,18 @@ public function index(ModulesManager $manager) {
     return View::make('frontend');
 }
 ```
+If you need to pass several parameters to the constructor, wrap them in an array.
+
+```php
+public function index(ModulesManager $manager) {
+    $manager->registerModule([
+        [TestModule::class, [$construct_arg1, $consruct_arg2]],
+    ]);
+
+    return View::make('frontend');
+}
+```
+
 Add the third element of the array to pass arguments to the render method.
 
 ```php
