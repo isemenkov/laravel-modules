@@ -145,7 +145,7 @@ public function index(ModulesManager $manager) {
 }
 ```
 
-To pass arguments to a constructor, pass an array, the first element of which will be the class name, and the second will be arguments to the constructor.
+To pass arguments to a constructor, pass an array, the first element of which will be the class name, and the second element will be arguments to the constructor.
 
 ```php
 public function index(ModulesManager $manager) {

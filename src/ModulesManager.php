@@ -2,8 +2,8 @@
 
 namespace isemenkov\Modules;
 
-use isemenkov\Modules\Module;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 
 final class ModulesManager {
 
@@ -211,6 +211,24 @@ final class ModulesManager {
     }
 
     /**
+     * Get module permission key.
+     * 
+     * @param stdClass $Module
+     * @return string|null
+     */
+    private function getModulePermissionKey($module) {
+    
+        // Check if module has permission method.
+        $result = $this->getValue($module, 'permission');
+
+        if(is_string($result)) {
+            return $result;
+        }
+
+        return null;
+    }
+
+    /**
      * Register new template module.
      * 
      * @param isemenkov\Modules\Module|string|array $module Register module 
@@ -306,6 +324,17 @@ final class ModulesManager {
 
             // Foreach module in current render position.
             foreach($this->modules[$position] as $module) {
+
+                // Check user permissions.
+                $module_permission_key = 
+                    $this->getModulePermissionKey($module['module']);
+                if(! is_null($module_permission_key)) {
+                    if(Gate::denies($module_permission_key)) {
+                        
+                        // Access denied, module not render.
+                        continue;
+                    }
+                }
 
                 // Try to get module cache.
                 $module_cache_key = $this->getModuleCacheKey($module['module']);
